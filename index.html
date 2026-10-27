@@ -81,11 +81,82 @@ function renderStep(){const s=steps[current];document.getElementById("stepTitle"
 function startBooking(){document.getElementById("welcome").classList.remove("active");document.getElementById("confirmation").classList.remove("active");document.getElementById("booking").classList.add("active");current=0;renderStep();window.scrollTo({top:0,behavior:"smooth"})}
 function nextStep(){const error=steps[current].validate();if(error){document.getElementById("stepError").textContent=error;return}if(current<steps.length-1){current++;renderStep()}else showConfirmation();window.scrollTo({top:0,behavior:"smooth"})}
 function previousStep(){if(current===0){document.getElementById("booking").classList.remove("active");document.getElementById("welcome").classList.add("active")}else{current--;renderStep()}window.scrollTo({top:0,behavior:"smooth"})}
-function showConfirmation(){document.getElementById("booking").classList.remove("active");document.getElementById("confirmation").classList.add("active");const d=new Date(state.date+"T12:00:00");document.getElementById("confirmedDate").textContent=d.toLocaleDateString(undefined,{weekday:"long",year:"numeric",month:"long",day:"numeric"});document.getElementById("confirmedTime").textContent=state.time;document.getElementById("finalSummary").innerHTML=summaryCells();window.scrollTo({top:0,behavior:"smooth"})}
+
+async function showConfirmation() {
+  const btn = document.querySelector("#stepPanel .nav-buttons .primary");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+  }
+
+  try {
+    const response = await fetch(
+      SUPABASE_URL + "/rest/v1/appointments",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": "Bearer " + SUPABASE_KEY,
+          "Prefer": "return=minimal"
+        },
+        body: JSON.stringify({
+          customer_name: state.name,
+          skin_tone: state.skin || null,
+          piercing_type: state.piercing,
+          metal: state.metal,
+          jewellery_design: state.design,
+          cultural_preference: state.culture,
+          budget: state.budget,
+          package: state.package,
+          appointment_date: state.date,
+          appointment_time: state.time
+        })
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    document.getElementById("booking").classList.remove("active");
+    document.getElementById("confirmation").classList.add("active");
+
+    const d = new Date(state.date + "T12:00:00");
+    document.getElementById("confirmedDate").textContent =
+      d.toLocaleDateString(undefined, {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      });
+
+    document.getElementById("confirmedTime").textContent = state.time;
+    document.getElementById("finalSummary").innerHTML = summaryCells();
+
+    document.querySelector("#confirmation .success > p").textContent =
+      "Your request has been saved. The studio has not yet confirmed availability.";
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+  } catch (error) {
+    console.error("Appointment save failed:", error);
+
+    document.getElementById("stepError").textContent =
+      "Could not save your appointment. Please try again. Check the database permissions if the problem continues.";
+
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Finish appointment";
+    }
+  }
+}
 function resetBooking(){Object.keys(state).forEach(k=>state[k]="");document.getElementById("confirmation").classList.remove("active");document.getElementById("booking").classList.remove("active");document.getElementById("welcome").classList.add("active");window.scrollTo({top:0,behavior:"smooth"})}
 function openAbout(){document.getElementById("aboutModal").classList.add("open")}
 function closeAbout(){document.getElementById("aboutModal").classList.remove("open")}
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeAbout()});
+  const SUPABASE_URL = "https://tgujfsspdhdyfmllimzx.supabase.co";
+const SUPABASE_KEY = "sb_publishable_2v7dMS-6Bvs0uwQ9tuTqTQ_K-mxoaLc";
 </script>
 </body>
 </html>
